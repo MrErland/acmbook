@@ -1,8 +1,12 @@
 
 /*
 《算法竞赛入门经典（第二版）》第5章 第3节 高精度非负整数类
- Origin Code: 赋值运算符、输出流、输入流，加法运算
+ Origin Code: 赋值运算符、输出流、输入流，加法运算、比较运算符
  Version: 0.0
+ Date: 2018.1.26
+ *************************************************************
+ Version: 0.1 增加减法、乘法运算
+ By: Erland
  Date: 2018.1.26
 */
 
@@ -13,8 +17,8 @@
 using namespace std;
 
 struct BigInteger {
-  static const int BASE = 100000000;
-  static const int WIDTH = 8;
+  static const int BASE = 10000;        // 考虑到乘法运算可能产生较大的数，因此BASE改为10000
+  static const int WIDTH = 4;
   vector<int> s;
 
   BigInteger(long long num = 0) { *this = num; }    // 构造函数
@@ -27,12 +31,12 @@ struct BigInteger {
     return *this;
   }
 
-  BigInteger operator = (const string& str) {           // 赋值运算符
+  BigInteger operator = (const string& str) {         // 赋值运算符
     s.clear();
     int x, len = (str.length() - 1) / WIDTH + 1;
     for(int i = 0; i < len; i++) {
-      int end = str.length() - i*WIDTH;            // 每8位子串的尾部
-      int start = max(0, end - WIDTH);             // 每8位子串的头部
+      int end = str.length() - i * WIDTH;          // 每width位子串的尾部
+      int start = max(0, end - WIDTH);             // 每width位子串的头部
       sscanf(str.substr(start, end-start).c_str(), "%d", &x);
       s.push_back(x);
     }
@@ -52,13 +56,82 @@ struct BigInteger {
     }
     return c;
   }
+
+  BigInteger operator - (const BigInteger& b) const {       // 减法 注意减数和被减数可能交换位置
+    BigInteger c;
+    c.s.clear();
+    if(*this > b)
+    {
+      for(unsigned int i = 0, g = 0; ; i++) {
+        if(g == 0 && i >= s.size() && i >= b.s.size()) break;
+        int x = g;
+        if(i < s.size()) x = s[i] - g;
+        if(i < b.s.size()) x -= b.s[i];
+        if(x > 0) { g = 0; c.s.push_back(x % BASE); }
+        else {g = 1; c.s.push_back((x + BASE) % BASE); }
+      }
+    }
+    else         // 如果减数大于被减数，互换位置，并在结果的高位加上负号
+    {
+      for(unsigned int i = 0, g = 0; ; i++) {
+        if(g == 0 && i >= s.size() && i >= b.s.size()) break;
+        int x = g;
+        if(i < s.size()) x = b.s[i] - g;        // 修改
+        if(i < b.s.size()) x -= s[i];           // 修改
+        if(x > 0) { g = 0; c.s.push_back(x % BASE); }
+        else {g = 1; c.s.push_back((x + BASE) % BASE); }
+      }
+        int t = c.s.front();        // 结果的最高位取负号
+        c.s.pop_back();
+        c.s.push_back(0 - t);
+    }
+    return c;
+  }
+
+  BigInteger mul(int b, int j) const {     // 单个元素与BigInteger相乘
+      BigInteger c;
+      c.s.clear();
+      for(int i = 0; i < j; i++)         // 在末尾补0
+        c.s.push_back(0);
+      for(unsigned int i = 0, g = 0; ; i++)
+      {
+          if(g == 0 && i >= s.size()) break;
+          int x = 0;
+          if(i < s.size()) x = b * s[i];
+          c.s.push_back((x + g) % BASE);
+          g = (x + g) / BASE;
+      }
+      return c;
+  }
+
+  BigInteger operator * (const BigInteger& b) const {           // 乘法
+    BigInteger c;
+    c.s.clear();
+    for(unsigned int i = 0; i < b.s.size(); i++) {    // 把b的每一个子元素分别去乘this
+        BigInteger t = mul(b.s[i], i);          // 累加
+        c = (c + t);
+    }
+    return c;
+  }
+
+  bool operator < (const BigInteger& b) const{             // 小于
+    if(s.size() != b.s.size()) return s.size() < b.s.size();
+    for(int i = s.size() - 1; i >= 0; i++)
+        if(s[i] != b.s[i]) return s[i] < b.s[i];
+    return false;      // 相等
+  }
+  bool operator > (const BigInteger& b) const{ return b < *this; }
+  bool operator <= (const BigInteger& b) const{ return !(b < *this); }
+  bool operator >= (const BigInteger& b) const{ return !(*this < b); }
+  bool operator != (const BigInteger& b) const{ return b < *this || *this < b; }
+  bool operator == (const BigInteger& b) const{ return !(b < *this) && !(*this < b); }
 };
 
 ostream& operator << (ostream &out, const BigInteger& x) {      // 输出流
   out << x.s.back();                              // 先输入最高位
   for(int i = x.s.size()-2; i >= 0; i--) {
-    char buf[20];
-    sprintf(buf, "%08d", x.s[i]);
+    char buf[10];
+    sprintf(buf, "%04d", x.s[i]);           // 修改位数 08 -> 04
     for(unsigned int j = 0; j < strlen(buf); j++) out << buf[j];
   }
   return out;
@@ -76,10 +149,14 @@ istream& operator >> (istream &in, BigInteger& x) {             // 输入流
 set<BigInteger> s;
 map<BigInteger, int> m;
 
-int main() {
+int main()
+{
   BigInteger a, b;
   cin >> a >> b;
   cout << a + b << "\n";
+  cout << a - b << "\n";
+  cout << b - a << "\n";
+  cout << a * b << "\n";
   cout << BigInteger::BASE << "\n";
   return 0;
 }
