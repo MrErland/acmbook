@@ -8,6 +8,10 @@
  Version: 0.1 增加减法、乘法运算
  By: Erland
  Date: 2018.1.26
+ *************************************************************
+ Version: 0.2 修改了减法中的Bug、添加除法运算
+ By: Erland
+ Date: 2018.1.27
 */
 
 #include<cstdio>
@@ -67,7 +71,7 @@ struct BigInteger {
         int x = g;
         if(i < s.size()) x = s[i] - g;
         if(i < b.s.size()) x -= b.s[i];
-        if(x > 0) { g = 0; c.s.push_back(x % BASE); }
+        if(x >= 0) { g = 0; c.s.push_back(x % BASE); }
         else {g = 1; c.s.push_back((x + BASE) % BASE); }
       }
     }
@@ -78,10 +82,10 @@ struct BigInteger {
         int x = g;
         if(i < s.size()) x = b.s[i] - g;        // 修改
         if(i < b.s.size()) x -= s[i];           // 修改
-        if(x > 0) { g = 0; c.s.push_back(x % BASE); }
+        if(x >= 0) { g = 0; c.s.push_back(x % BASE); }
         else {g = 1; c.s.push_back((x + BASE) % BASE); }
       }
-        int t = c.s.front();        // 结果的最高位取负号
+        int t = c.s.back();        // 结果的最高位取负号         // 0.2 中修改了Bug
         c.s.pop_back();
         c.s.push_back(0 - t);
     }
@@ -114,6 +118,47 @@ struct BigInteger {
     return c;
   }
 
+  BigInteger operator / (const BigInteger& b) const {       // 除法
+    BigInteger c;
+    c.s.clear();
+    if(*this < b) { c.s.push_back(0);  return c; }     // a < b 输出0
+    if(*this == b) { c.s.push_back(1); return c; }
+    int i;     // 10 的 i 次方
+    BigInteger t = b;
+    vector <BigInteger> tmp;        // 用来保存10的次方倍数
+    tmp.push_back(t);
+    while(true)              // 将除数增大10倍，直到大于被除数
+    {
+        t = t * 10;
+        if(*this > t) tmp.push_back(t);
+        else break;
+    }
+    vector <int> ans;       // 保存结果的每一位
+    BigInteger re = *this;
+    while(!tmp.empty())
+    {
+        t = tmp[tmp.size() - 1];
+        for(i = 1; ; i++) { if(re - (t * i) < 0 ) break; }
+        re = re - (t * (i - 1));
+        ans.push_back(i - 1);
+        tmp.pop_back();
+    }
+    // 把ans转为BigInteger
+    int powTen[4] = {1, 10, 100, 1000};
+    while(!ans.empty())
+    {
+        int x = 0;
+        for(int i = 0; i < WIDTH; i++){
+            if(!ans.empty()){
+                x += (ans.back() * powTen[i]);
+                ans.pop_back();
+            }
+        }
+        c.s.push_back(x);
+    }
+    return c;
+  }
+
   bool operator < (const BigInteger& b) const{             // 小于
     if(s.size() != b.s.size()) return s.size() < b.s.size();
     for(int i = s.size() - 1; i >= 0; i++)
@@ -123,8 +168,8 @@ struct BigInteger {
   bool operator > (const BigInteger& b) const{ return b < *this; }
   bool operator <= (const BigInteger& b) const{ return !(b < *this); }
   bool operator >= (const BigInteger& b) const{ return !(*this < b); }
-  bool operator != (const BigInteger& b) const{ return b < *this || *this < b; }
-  bool operator == (const BigInteger& b) const{ return !(b < *this) && !(*this < b); }
+  bool operator != (const BigInteger& b) const{ return (b < *this) || (*this < b); }
+  bool operator == (const BigInteger& b) const{ return (!(b < *this)) && (!(*this < b)); }
 };
 
 ostream& operator << (ostream &out, const BigInteger& x) {      // 输出流
@@ -148,16 +193,18 @@ istream& operator >> (istream &in, BigInteger& x) {             // 输入流
 #include<map>
 set<BigInteger> s;
 map<BigInteger, int> m;
+static const BigInteger ZERO = 0;
 
 int main()
 {
   BigInteger a, b;
   cin >> a >> b;
-  cout << a + b << "\n";
-  cout << a - b << "\n";
-  cout << b - a << "\n";
-  cout << a * b << "\n";
-  cout << BigInteger::BASE << "\n";
+  cout << "a + b = " << a + b << "\n";
+  cout << "a - b = " << a - b << "\n";
+  cout << "b - a = " << b - a << "\n";
+  cout << "a * b = " << a * b << "\n";
+  if(b != ZERO) cout << "a / b = " << a / b << "\n";       // 存在bug
+  cout << "BigInteger:BASE = " << BigInteger::BASE << "\n";
   return 0;
 }
 
