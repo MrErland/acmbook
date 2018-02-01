@@ -29,7 +29,6 @@ int main()
 		}
 		sort(a.begin(), a.end());
 
-		bool b = false;
 		int i = 0;		// 从首位
 		int j = n - 1;		// 从尾部
 		double mid = (a[i].x * 1.0 + a[j].x) / 2;	// 对称轴
