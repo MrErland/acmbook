@@ -33,12 +33,6 @@ void getArray(string str, string &name, string &value){		// 对数组结构分�
 	}
 }
 
-bool isValue(string value){
-	int index = value.find_first_of('[', 0);
-	if (index != -1) return true;
-	return false;
-}
-
 int calculateArray(string str){
 	string name, value;
 	getArray(str, name, value);
